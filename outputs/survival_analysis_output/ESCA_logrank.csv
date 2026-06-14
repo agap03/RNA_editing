@@ -1,0 +1,2 @@
+Cancer_type,n_total,n_low_AEI,n_high_AEI,events_low_AEI,events_high_AEI,median_AEI_cutoff,median_survival_low_AEI,median_survival_high_AEI,logrank_p_value,Significance
+ESCA,174,87,87,33,32,1.443,1402.0,784.0,0.655445,ns

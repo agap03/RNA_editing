@@ -1,0 +1,2 @@
+Cancer_type,n_total,n_low_AEI,n_high_AEI,events_low_AEI,events_high_AEI,median_AEI_cutoff,median_survival_low_AEI,median_survival_high_AEI,logrank_p_value,Significance
+KICH,87,43,44,4,8,0.812,inf,inf,0.137368,ns

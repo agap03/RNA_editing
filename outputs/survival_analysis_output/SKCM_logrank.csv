@@ -1,0 +1,2 @@
+Cancer_type,n_total,n_low_AEI,n_high_AEI,events_low_AEI,events_high_AEI,median_AEI_cutoff,median_survival_low_AEI,median_survival_high_AEI,logrank_p_value,Significance
+SKCM,100,50,50,17,13,0.962,877.0,857.0,0.625825,ns

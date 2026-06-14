@@ -1,0 +1,36 @@
+# Snakemake
+.snakemake/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+dist/
+build/
+*.egg
+
+# Virtual environments
+.env
+.venv/
+venv/
+env/
+
+# IDE / editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Duplicate / backup data folder
+all_data/
+
+# Logs
+*.log
+
+MCBS_project_description.pdf
+hg38.fa
+data/
+outputs/context_extraction_output/*.csv

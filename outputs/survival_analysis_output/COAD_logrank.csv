@@ -1,0 +1,2 @@
+Cancer_type,n_total,n_low_AEI,n_high_AEI,events_low_AEI,events_high_AEI,median_AEI_cutoff,median_survival_low_AEI,median_survival_high_AEI,logrank_p_value,Significance
+COAD,305,152,153,33,36,0.871,inf,2821.0,0.803535,ns

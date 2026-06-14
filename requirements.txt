@@ -1,0 +1,10 @@
+snakemake
+pandas
+numpy
+matplotlib
+biopython
+scipy
+seaborn
+statsmodels
+SigProfilerAssignment
+lifelines

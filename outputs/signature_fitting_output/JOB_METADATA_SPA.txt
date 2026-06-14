@@ -1,0 +1,53 @@
+THIS FILE CONTAINS THE METADATA ABOUT SYSTEM AND RUNTIME
+
+
+-------System Info-------
+Operating System Name: Linux
+Nodename: DESKTOP-8T79RVB
+Release: 5.15.167.4-microsoft-standard-WSL2
+Version: #1 SMP Tue Nov 5 00:21:55 UTC 2024
+
+-------Python and Package Versions------- 
+Python Version: 3.11.15
+SigProfilerPlotting Version: 1.4.3
+SigProfilerMatrixGenerator Version: 1.3.6
+SigProfilerAssignment Version: 1.1.3
+Pandas version: 2.3.3
+Numpy version: 2.4.6
+
+--------------EXECUTION PARAMETERS--------------
+INPUT DATA
+	input_type: matrix
+	output: outputs/signature_fitting_output
+	samples: <class 'pandas.core.frame.DataFrame'>
+	cpu: -1
+	reference_genome: GRCh37
+	context_types: 96
+	exome: False
+COSMIC MATCH
+	cosmic_version: 3.5
+	nnls_add_penalty: 0.05
+	nnls_remove_penalty: 0.01
+	initial_remove_penalty: 0.05
+	de_novo_fit_penalty: 0.02
+	export_probabilities: True
+	collapse_to_SBS96: False
+	denovo_refit_option: False
+	decompose_fit_option: True
+	cosmic_fit_option: False
+
+-------Analysis Progress------- 
+[2026-06-14 21:55:42] Analysis started: 
+
+ Decomposing De Novo Signatures  .....
+ [2026-06-14 21:55:42] Assigning decomposed signature 
+
+ Finished Decompose fitting! 
+Execution time:0:00:15.662100
+
+[2026-06-14 21:55:58] Analysis ended: 
+
+-------Job Status------- 
+Assignment of mutational signatures completed successfully! 
+Total execution time: 0:00:15 
+Results can be found in:  outputs/signature_fitting_output  folder
