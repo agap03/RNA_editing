@@ -32,5 +32,5 @@ all_data/
 
 MCBS_project_description.pdf
 hg38.fa
-data/
-outputs/context_extraction_output/*.csv
+data/REIA_data/STAD.csv
+outputs/context_extraction_output/STAD_contexts.csv
