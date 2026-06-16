@@ -8,7 +8,6 @@ by the REDI figure scripts and combined analysis figures.
 
 import argparse
 import os
-import re
 
 import pandas as pd
 from itertools import combinations
@@ -16,7 +15,7 @@ from scipy import stats
 from statsmodels.stats.multitest import multipletests
 
 from plot_utils import significance_stars
-from redi_utils import NORMAL_TISSUE_MAP, load_redi_data
+from redi_utils import NORMAL_TISSUE_MAP, get_matched_tumor_normal_data, load_redi_data
 
 SCRIPT = "AEI_analysis"
 
@@ -105,36 +104,37 @@ def analysis_aei_vs_expression(tumor, gene):
 
 
 def analysis3_tumor_vs_normal(tumor, normal, normal_map):
-    """Compare AEI between tumor and matched normal tissue for each cancer type."""
+    """Compare AEI between tumor and batch-corrected matched normal tissue."""
     print(f"[{SCRIPT}] Analysis 3: Tumor vs normal AEI")
 
+    combined, batch_info = get_matched_tumor_normal_data(
+        tumor, normal, normal_map, batch_correct=True,
+    )
+    if combined.empty:
+        print(f"[{SCRIPT}]   skipped (no matched normal reference)")
+        return pd.DataFrame()
+
+    if batch_info is not None:
+        print(f"[{SCRIPT}]   batch correction: global median={batch_info['global_median']:.3f}, "
+              f"tumor shift={batch_info['tumor_shift']:+.3f}, "
+              f"normal shift={batch_info['normal_shift']:+.3f}")
+
     tumor_normal_results = []
-    for ct in sorted(tumor["Cancer_type"].unique()):
-        tumor_aei = tumor[(tumor["Cancer_type"] == ct) & (tumor["Status"] == "tumor")]["AEI"]
-
-        # Match normals by tissue keywords rather than exact TCGA sample IDs.
-        keywords = normal_map.get(ct, [])
-        if len(keywords) == 0:
-            normal_aei = pd.Series(dtype=float)
-        else:
-            pattern = "|".join(re.escape(k) for k in keywords)
-            matched = normal[normal["Body Site/Study"].astype(str).str.contains(pattern, case=False, na=False)]
-            normal_aei = matched[matched["Status"] == "normal"]["AEI"]
-
-        if len(normal_aei) == 0:
-            print(f"[{SCRIPT}]   {ct}: skipped (no normal tissue available)")
-            continue
+    for cancer_type in sorted(combined["Cancer_type"].unique()):
+        subset = combined[combined["Cancer_type"] == cancer_type]
+        tumor_aei = subset[subset["Status"] == "tumor"]["AEI"]
+        normal_aei = subset[subset["Status"] == "normal"]["AEI"]
 
         _, p = stats.mannwhitneyu(tumor_aei, normal_aei, alternative="two-sided")
         direction = "higher" if tumor_aei.median() > normal_aei.median() else "lower"
         sig = significance_stars(p)
 
-        print(f"[{SCRIPT}]   {ct}: tumor={tumor_aei.median():.3f}, "
+        print(f"[{SCRIPT}]   {cancer_type}: tumor={tumor_aei.median():.3f}, "
               f"normal={normal_aei.median():.3f}, "
               f"{direction} in tumor, p={p:.4f} {sig}")
 
         tumor_normal_results.append({
-            "Cancer_type": ct,
+            "Cancer_type": cancer_type,
             "Tumor_median_AEI": round(tumor_aei.median(), 3),
             "Normal_median_AEI": round(normal_aei.median(), 3),
             "Direction": direction,

@@ -14,10 +14,11 @@ import pandas as pd
 import seaborn as sns
 from scipy import stats
 
-from plot_utils import save_figure
-from redi_utils import clean_labels, load_redi_data
+from plot_utils import add_significance_legend, save_figure, significance_stars
+from redi_utils import clean_labels, get_matched_tumor_normal_data, load_redi_data
 
 SCRIPT = "REDI_statistics_figures"
+EXPRESSION_GENES = ["ADAR", "ADARB1", "ADARB2"]
 
 
 def _correlation_stats_by_label(correlation_df):
@@ -90,23 +91,123 @@ def figure_aei_vs_expression(tumor, correlation_df, gene, outdir):
     save_figure(SCRIPT, os.path.join(outdir, f"AEI_vs_{gene}.png"), bbox_inches="tight")
 
 
-def figure3_tumor_vs_normal(combined, outdir):
-    """Side-by-side boxplots of AEI in tumor and matched normal samples."""
-    combined = combined[combined["Cancer_type"].notna()].copy()
+def _load_correlation_tables(correlations_dir):
+    """Load per-gene AEI correlation tables produced by AEI_analysis."""
+    tables = {}
+    for gene in EXPRESSION_GENES:
+        path = os.path.join(correlations_dir, f"AEI_vs_{gene}.csv")
+        if os.path.exists(path):
+            tables[gene] = pd.read_csv(path)
+    return tables
+
+
+def figure_aei_expression_heatmap(correlation_tables, outdir):
+    """Heatmap of per-cancer Pearson r between AEI and ADAR family expression."""
+    available_genes = [gene for gene in EXPRESSION_GENES if gene in correlation_tables]
+    if not available_genes:
+        print(f"[{SCRIPT}] Skipped: AEI expression correlation heatmap (no correlation tables)")
+        return
+
+    long_parts = []
+    for gene in available_genes:
+        part = correlation_tables[gene][["Cancer_type", "Pearson_r", "Significance"]].copy()
+        part["Gene"] = gene
+        long_parts.append(part)
+
+    long_df = pd.concat(long_parts, ignore_index=True)
+    matrix = long_df.pivot(index="Cancer_type", columns="Gene", values="Pearson_r")[available_genes]
+    sig_matrix = long_df.pivot(index="Cancer_type", columns="Gene", values="Significance")[available_genes]
+
+    if "ADAR" in matrix.columns:
+        matrix = matrix.sort_values("ADAR", ascending=False)
+        sig_matrix = sig_matrix.loc[matrix.index]
+
+    annotations = pd.DataFrame(index=matrix.index, columns=matrix.columns, dtype=str)
+    for cancer_type in matrix.index:
+        for gene in matrix.columns:
+            r_value = matrix.loc[cancer_type, gene]
+            stars = sig_matrix.loc[cancer_type, gene]
+            stars = "" if stars == "ns" else stars
+            annotations.loc[cancer_type, gene] = f"{r_value:.2f}{stars}"
+
+    height = max(6, 0.28 * len(matrix))
+    fig, ax = plt.subplots(figsize=(6, height))
+    sns.heatmap(
+        matrix,
+        annot=annotations,
+        fmt="",
+        cmap="RdBu_r",
+        center=0,
+        vmin=-0.5,
+        vmax=0.8,
+        linewidths=0.5,
+        cbar_kws={"label": "Pearson r"},
+        ax=ax,
+    )
+    ax.set_title("AEI vs ADAR family expression (per cancer type)", fontsize=12)
+    ax.set_xlabel("")
+    ax.set_ylabel("Cancer type")
+    ax.text(
+        1.52, 1.02,
+        "Pearson correlation\n* p < 0.05\n** p < 0.01\n*** p < 0.001",
+        transform=ax.transAxes,
+        ha="left", va="top", fontsize=8,
+        bbox=dict(boxstyle="round", facecolor="white", alpha=0.85, edgecolor="0.8"),
+    )
+    plt.tight_layout()
+    save_figure(SCRIPT, os.path.join(outdir, "AEI_vs_ADAR_family_heatmap.png"), bbox_inches="tight")
+
+
+def figure3_tumor_vs_normal(tumor, normal, outdir):
+    """Side-by-side boxplots of AEI in tumor and batch-corrected matched normal samples."""
+    combined, batch_info = get_matched_tumor_normal_data(
+        tumor, normal, batch_correct=True,
+    )
+    if combined.empty:
+        print(f"[{SCRIPT}] Skipped: tumor vs normal figure (no matched normal reference)")
+        return
+
+    if batch_info is not None:
+        print(f"[{SCRIPT}] Applied AEI batch correction: global median="
+              f"{batch_info['global_median']:.3f}, tumor {batch_info['tumor_shift']:+.3f}, "
+              f"normal {batch_info['normal_shift']:+.3f}")
+
     combined = clean_labels(combined)
     order = sorted(combined["Label"].unique())
 
-    fig, ax = plt.subplots(figsize=(15, 5))
-    sns.boxplot(data=combined, x="Label", y="AEI",
-                hue="Status", order=order,
-                palette={"tumor": "salmon", "normal": "lightblue"},
-                ax=ax,
-                flierprops=dict(marker="o", markersize=2, alpha=0.3))
+    fig, ax = plt.subplots(figsize=(12, 5))
+    sns.boxplot(
+        data=combined, x="Label", y="AEI", hue="Status", order=order,
+        palette={"tumor": "salmon", "normal": "lightblue"}, ax=ax,
+        flierprops=dict(marker="o", markersize=2, alpha=0.3),
+    )
+
+    y_range = combined["AEI"].max() - combined["AEI"].min()
+    y_offset = 0.03 * y_range if y_range > 0 else 0.05
+    y_top = combined.groupby("Label")["AEI"].max()
+
+    for index, label in enumerate(order):
+        subset = combined[combined["Label"] == label]
+        tumor_aei = subset[subset["Status"] == "tumor"]["AEI"]
+        normal_aei = subset[subset["Status"] == "normal"]["AEI"]
+        if len(tumor_aei) == 0 or len(normal_aei) == 0:
+            continue
+        _, p_value = stats.mannwhitneyu(tumor_aei, normal_aei, alternative="two-sided")
+        ax.text(
+            index,
+            y_top[label] + y_offset,
+            significance_stars(p_value),
+            ha="center",
+            va="bottom",
+            fontsize=11,
+        )
+
     plt.xticks(rotation=90)
-    ax.set_title("AEI in tumor vs normal tissue", fontsize=13)
+    ax.set_title("AEI in tumor vs matched normal tissue (batch-corrected)", fontsize=13)
     ax.set_xlabel("Cancer type", fontsize=11)
     ax.set_ylabel("AEI (%)", fontsize=11)
-    ax.legend(title="Status")
+    ax.legend(title="Status", loc="upper left")
+    add_significance_legend(ax, loc="upper right")
     plt.tight_layout()
     save_figure(SCRIPT, os.path.join(outdir, "tumor_vs_normal.png"))
 
@@ -134,18 +235,19 @@ def main():
 
     figure1_aei_across_cancers(tumor, args.output)
 
-    for gene in ["ADAR", "ADARB1", "ADARB2"]:
-        correlation_path = os.path.join(args.correlations, f"AEI_vs_{gene}.csv")
+    correlation_tables = _load_correlation_tables(args.correlations)
+    for gene in EXPRESSION_GENES:
         if gene not in tumor.columns:
             print(f"[{SCRIPT}] Skipped: AEI vs {gene} figure ({gene} column missing)")
             continue
-        if not os.path.exists(correlation_path):
-            print(f"[{SCRIPT}] Skipped: AEI vs {gene} figure ({correlation_path} missing)")
+        if gene not in correlation_tables:
+            print(f"[{SCRIPT}] Skipped: AEI vs {gene} figure (AEI_vs_{gene}.csv missing)")
             continue
-        correlation_df = pd.read_csv(correlation_path)
-        figure_aei_vs_expression(tumor, correlation_df, gene, args.output)
+        figure_aei_vs_expression(tumor, correlation_tables[gene], gene, args.output)
 
-    figure3_tumor_vs_normal(combined, args.output)
+    figure_aei_expression_heatmap(correlation_tables, args.output)
+
+    figure3_tumor_vs_normal(tumor, normal, args.output)
 
     print(f"[{SCRIPT}] Done. Output directory: {os.path.abspath(args.output)}")
 

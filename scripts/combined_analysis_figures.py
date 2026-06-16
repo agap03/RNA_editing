@@ -61,17 +61,7 @@ def main():
     plt.tight_layout()
     save_figure(SCRIPT, os.path.join(output_dir, "activity_vs_mean_AEI.png"))
 
-    # Figure 2: univariate view of RNA-SBS1 activity across cancer types.
-    plt.figure(figsize=(8, 6))
-    plt.bar(activity["Cancer_type"], activity["Activity"])
-    plt.xticks(rotation=90)
-    plt.xlabel("Cancer type")
-    plt.ylabel("Activity")
-    plt.title("Activity of signature RNA-SBS1 across cancer types")
-    plt.tight_layout()
-    save_figure(SCRIPT, os.path.join(output_dir, "activity_by_cancer_type.png"))
-
-    # Figure 3: does higher signature activity track with stronger AEI-ADAR correlation?
+    # Figure 2: cancer-level RNA-SBS1 activity vs Pearson correlation between AEI and ADAR.
     df = pd.merge(correlation, activity, on="Cancer_type", how="inner")
 
     plt.figure(figsize=(8, 6))

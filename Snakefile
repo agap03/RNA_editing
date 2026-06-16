@@ -2,10 +2,11 @@
 # 1. Context extraction
 # 2. Trinucleotide spectrum generation
 # 3. Signature fitting
-# 4. AEI analyses
-# 5. REDI statistics figures
-# 6. Combined analysis figures
-# 7. Survival analysis
+# 4. Signature figures 
+# 5. AEI analyses
+# 6. REDI statistics figures
+# 7. Combined analysis figures 
+# 8. Survival analysis
 
 SAMPLES = glob_wildcards("data/REIA_data/{sample}.csv").sample
 CLINICAL = glob_wildcards("data/clinical_data/TCGA-{cancer}.survival.tsv").cancer
@@ -31,6 +32,9 @@ rule all:
         # Signature fitting
         "outputs/signature_fitting_output/Decompose_Solution/Activities/Decompose_Solution_Activities.txt",
 
+        # Signature figures
+        "outputs/signature_figures_output/activity_by_cancer_type.png",
+
         # AEI analysis outputs
         "outputs/AEI_analysis_output/AEI_pairwise.csv",
         "outputs/AEI_analysis_output/AEI_summary_statistics.csv",
@@ -44,11 +48,11 @@ rule all:
         "outputs/REDI_statistics_figures_output/AEI_vs_ADAR.png",
         "outputs/REDI_statistics_figures_output/AEI_vs_ADARB1.png",
         "outputs/REDI_statistics_figures_output/AEI_vs_ADARB2.png",
+        "outputs/REDI_statistics_figures_output/AEI_vs_ADAR_family_heatmap.png",
         "outputs/REDI_statistics_figures_output/tumor_vs_normal.png",
 
         # Combined analysis figures
         "outputs/combined_analysis_figures_output/activity_vs_mean_AEI.png",
-        "outputs/combined_analysis_figures_output/activity_by_cancer_type.png",
         "outputs/combined_analysis_figures_output/activity_vs_pearson_correlation.png",
 
         # Survival analysis
@@ -115,6 +119,21 @@ rule signature_fitting:
         """
 
 
+# Signature figures 
+
+rule signature_figures:
+    input:
+        activity="outputs/signature_fitting_output/Decompose_Solution/Activities/Decompose_Solution_Activities.txt",
+    output:
+        activity_by_cancer="outputs/signature_figures_output/activity_by_cancer_type.png",
+    shell:
+        """
+        python scripts/signature_figures.py \
+            --activity {input.activity} \
+            --output outputs/signature_figures_output
+        """
+
+
 # AEI analyses
 
 rule aei_analysis:
@@ -149,6 +168,7 @@ rule redi_statistics_figures:
         aei_vs_adar="outputs/REDI_statistics_figures_output/AEI_vs_ADAR.png",
         aei_vs_adarb1="outputs/REDI_statistics_figures_output/AEI_vs_ADARB1.png",
         aei_vs_adarb2="outputs/REDI_statistics_figures_output/AEI_vs_ADARB2.png",
+        aei_heatmap="outputs/REDI_statistics_figures_output/AEI_vs_ADAR_family_heatmap.png",
         tumor_vs_normal="outputs/REDI_statistics_figures_output/tumor_vs_normal.png"
     shell:
         """
@@ -169,7 +189,6 @@ rule combined_analysis_figures:
         aei="outputs/AEI_analysis_output/AEI_summary_statistics.csv"
     output:
         activity_vs_aei="outputs/combined_analysis_figures_output/activity_vs_mean_AEI.png",
-        activity_by_cancer="outputs/combined_analysis_figures_output/activity_by_cancer_type.png",
         activity_vs_correlation="outputs/combined_analysis_figures_output/activity_vs_pearson_correlation.png"
     shell:
         """

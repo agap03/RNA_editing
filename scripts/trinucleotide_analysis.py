@@ -16,11 +16,12 @@ from plot_utils import save_figure
 SCRIPT = "trinucleotide_analysis"
 
 
-def plot_spectrum(df, path):
+def plot_spectrum(df, path, sample):
     """Horizontal bar plot of context counts, sorted for readability."""
     plt.figure(figsize=(6, 5))
     df_sorted = df.sort_values("Count")
     plt.barh(df_sorted["Context"], df_sorted["Count"])
+    plt.title(f"{sample}: trinucleotide editing spectrum", fontsize=12)
     plt.xlabel("Count")
     plt.ylabel("Context")
     plt.tight_layout()
@@ -55,8 +56,9 @@ def main():
             os.makedirs(out_dir, exist_ok=True)
 
     spectrum.to_csv(args.output, index=False)
-    plot_spectrum(spectrum, args.plot)
+    plot_spectrum(spectrum, args.plot, sample)
     print(f"[{SCRIPT}] Saved: {os.path.abspath(args.output)}")
+    print(f"[{SCRIPT}] Saved: {os.path.abspath(args.plot)}")
 
 
 if __name__ == "__main__":
